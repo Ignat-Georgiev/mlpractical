@@ -133,11 +133,11 @@ class MNISTDataProvider(DataProvider):
         super(MNISTDataProvider, self).__init__(
             inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
 
-    # def next(self):
-    #    """Returns next data batch or raises `StopIteration` if at end."""
-    #    inputs_batch, targets_batch = super(MNISTDataProvider, self).next()
-    #    return inputs_batch, self.to_one_of_k(targets_batch)
-    #
+    def next(self):
+        """Returns next data batch or raises `StopIteration` if at end."""
+        inputs_batch, targets_batch = super(MNISTDataProvider, self).next()
+        return inputs_batch, self.to_one_of_k(targets_batch)
+
     def __next__(self):
         return self.next()
 
@@ -156,7 +156,9 @@ class MNISTDataProvider(DataProvider):
             to zero except for the column corresponding to the correct class
             which is equal to one.
         """
-        raise NotImplementedError()
+        encoded = np.zeros((self.batch_size, self.num_classes))
+        encoded[np.arange(self.batch_size), int_targets] = 1
+        return encoded
 
 
 class MetOfficeDataProvider(DataProvider):
@@ -187,20 +189,35 @@ class MetOfficeDataProvider(DataProvider):
         assert os.path.isfile(data_path), (
             'Data file does not exist at expected path: ' + data_path
         )
-        # load raw data from text file
-        # ...
-        # filter out all missing datapoints and flatten to a vector
-        # ...
-        # normalise data to zero mean, unit standard deviation
-        # ...
-        # convert from flat sequence to windowed data
-        # ...
-        # inputs are first (window_size - 1) entries in windows
-        # inputs = ...
-        # targets are last entry in windows
-        # targets = ...
+
+        loaded = np.loadtxt(data_path, skiprows=3)
+
+        # this removes the iregular values and flattens the array
+        loaded = loaded[loaded != -99.9]
+        loaded = loaded.astype(np.float32)
+
+        # normalise
+        # y = (x - mean) / standard_deviation
+        norm_data = (loaded - loaded.mean()) / np.std(loaded)
+
+        # create inputs and targets
+        inputs = norm_data[0: window_size - 1]
+        targets = norm_data[window_size - 1]
+
+        for i in range(len(norm_data) - window_size):
+            # print("New addition is shape", norm_data[i: i + window_size].shape)
+            inputs = np.vstack((inputs, norm_data[i: i + window_size - 1]))
+            targets = np.vstack((targets, norm_data[i + window_size - 1]))
+
+        print("inputs are ")
+        print(inputs)
+
+        print("targets are ")
+        print(targets)
+
         # initialise base class with inputs and targets arrays
-        # super(MetOfficeDataProvider, self).__init__(
-        #     inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
+        super(MetOfficeDataProvider, self).__init__(
+            inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
+
     def __next__(self):
             return self.next()
