@@ -19,7 +19,7 @@ import mlp.initialisers as init
 class Layer(object):
     """Abstract class defining the interface for a layer."""
 
-    def fprop(self, inputs):
+    def fprop(self, X):
         """Forward propagates activations through the layer transformation.
 
         Args:
@@ -28,7 +28,8 @@ class Layer(object):
         Returns:
             outputs: Array of layer outputs of shape (batch_size, output_dim).
         """
-        raise NotImplementedError()
+        # W, b = self.params()
+        # return np.dot(X, W.T) + b
 
     def bprop(self, inputs, outputs, grads_wrt_outputs):
         """Back propagates gradients through a layer.
@@ -66,7 +67,10 @@ class LayerWithParameters(Layer):
             with parameter gradients appearing in same order in tuple as
             returned from `get_params` method.
         """
-        raise NotImplementedError()
+        dW = np.dot(grads_wrt_outputs.T, inputs)
+        db = np.sum(grads_wrt_outputs, axis=0)
+    
+        return [dW, db]
 
     @property
     def params(self):
@@ -75,7 +79,7 @@ class LayerWithParameters(Layer):
         Returns:
             List of current parameter values.
         """
-        raise NotImplementedError()
+
 
 
 class AffineLayer(LayerWithParameters):
@@ -113,7 +117,8 @@ class AffineLayer(LayerWithParameters):
         Returns:
             outputs: Array of layer outputs of shape (batch_size, output_dim).
         """
-        raise NotImplementedError()
+        W, b = self.weights, self.biases
+        return np.dot(inputs, W.T) + b
 
     def grads_wrt_params(self, inputs, grads_wrt_outputs):
         """Calculates gradients with respect to layer parameters.
@@ -127,7 +132,10 @@ class AffineLayer(LayerWithParameters):
             list of arrays of gradients with respect to the layer parameters
             `[grads_wrt_weights, grads_wrt_biases]`.
         """
-        raise NotImplementedError()
+        dW = np.dot(grads_wrt_outputs.T, inputs)
+        db = np.sum(grads_wrt_outputs, axis=0)
+    
+        return [dW, db]
 
     @property
     def params(self):
