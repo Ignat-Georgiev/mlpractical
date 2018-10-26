@@ -199,6 +199,7 @@ class MNISTDataProvider(DataProvider):
         one_of_k_targets[range(int_targets.shape[0]), int_targets] = 1
         return one_of_k_targets
 
+
 class EMNISTDataProvider(DataProvider):
     """Data provider for EMNIST handwritten digit images."""
 

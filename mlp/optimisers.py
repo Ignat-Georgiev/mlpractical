@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class Optimiser(object):
     """Basic model optimiser."""
 
-    def __init__(self, model, error, learning_rule, train_dataset,
+    def __init__(self, model, error, learning_rule, train_dataset, scheduler=None,
                  valid_dataset=None, data_monitors=None, notebook=False):
         """Create a new optimiser instance.
 
@@ -34,9 +34,11 @@ class Optimiser(object):
                 to the error. Keys should correspond to a string label for
                 the statistic being evaluated.
         """
+        self.epochs = 0
         self.model = model
         self.error = error
         self.learning_rule = learning_rule
+        self.scheduler = scheduler
         self.learning_rule.initialise(self.model.params)
         self.train_dataset = train_dataset
         self.valid_dataset = valid_dataset
@@ -57,6 +59,7 @@ class Optimiser(object):
         respect to all the model parameters and then updates the model
         parameters according to the learning rule.
         """
+
         with self.tqdm_progress(total=self.train_dataset.num_batches) as train_progress_bar:
             train_progress_bar.set_description("Ep Prog")
             for inputs_batch, targets_batch in self.train_dataset:
@@ -65,7 +68,10 @@ class Optimiser(object):
                 grads_wrt_params = self.model.grads_wrt_params(
                     activations, grads_wrt_outputs)
                 self.learning_rule.update_params(grads_wrt_params)
+                if self.scheduler is not None:
+                    self.scheduler.update_learning_rule(self.learning_rule, self.epochs)
                 train_progress_bar.update(1)
+                self.epochs += 1
 
     def eval_monitors(self, dataset, label):
         """Evaluates the monitors for the given dataset.
