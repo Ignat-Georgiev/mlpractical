@@ -310,6 +310,7 @@ class AdamLearningRuleWithWeightDecay(GradientDescentLearningRule):
         self.epsilon = epsilon
         self.weight_decay = weight_decay
         self.initial_learning_rate = learning_rate
+        # self.learning_rate = learning_rate
 
     def initialise(self, params):
         """Initialises the state of the learning rule for a set or parameters.
@@ -320,6 +321,9 @@ class AdamLearningRuleWithWeightDecay(GradientDescentLearningRule):
                 update.
         """
         super(AdamLearningRuleWithWeightDecay, self).initialise(params)
+        self.sum_sq_grads = []
+        for param in self.params:
+            self.sum_sq_grads.append(np.zeros_like(param))
         self.moms_1 = []
         for param in self.params:
             self.moms_1.append(np.zeros_like(param))
@@ -333,7 +337,16 @@ class AdamLearningRuleWithWeightDecay(GradientDescentLearningRule):
         For this learning rule this corresponds to zeroing the estimates of
         the first and second moments of the gradients.
         """
-        raise NotImplementedError
+        for sum_sq_grad in self.sum_sq_grads:
+            sum_sq_grad *= 0.
+
+        for moms in self.moms_1:
+            moms *= 0
+
+        for moms in self.moms_2:
+            moms *= 0
+
+        self.step_count = 0
 
     def update_params(self, grads_wrt_params):
         """Applies a single update to all parameters.
@@ -348,8 +361,21 @@ class AdamLearningRuleWithWeightDecay(GradientDescentLearningRule):
         # ηt * initial_learning_rate = learning_rate
         # ηt = learning_rate / initial_learning_rate
 
-
-        raise NotImplementedError
+        self.step_count += 1
+        # print("prev params", np.sum(self.params[0]))
+        for param, sum_sq_grad, mom, grad in zip(
+                self.params, self.sum_sq_grads, self.moms_1, grads_wrt_params):
+            mom *= self.beta_1
+            mom += (1 - self.beta_1)*grad
+            mom_norm = mom / (1 - self.beta_1**self.step_count)
+            sum_sq_grad *= self.beta_2
+            sum_sq_grad += (1 - self.beta_2)*np.power(grad, 2)
+            sum_sq_grad_norm = sum_sq_grad / (1 - (self.beta_2**self.step_count))
+            eta_t = self.learning_rate / self.initial_learning_rate
+            param -= eta_t * (self.learning_rate * mom_norm /
+                      (np.sqrt(sum_sq_grad_norm) + self.epsilon)) + self.weight_decay * param
+        # print("after params", np.sum(self.params[0]))
+        # self.step_count += 1
 
 
 class AdaGradLearningRule(GradientDescentLearningRule):
